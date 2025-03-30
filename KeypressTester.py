@@ -30,7 +30,7 @@ class Tester:
         )
 
     def refresh(self):
-        print(" " * 200, end = "\r", flush = True)
+        print(" " * 120, end = "\r", flush = True)
         print(", ".join(str(key) for key in self.container), end = "\r", flush = True)
 
     def start(self):
