@@ -1,5 +1,3 @@
-import os
-import sys
 import time
 
 import ctypes
@@ -7,7 +5,7 @@ import pynput
 import winsound
 import colorama as cs
 
-import Configuration as cfg
+from Engine import Config as cfg
 
 # Colorama initialization
 cs.just_fix_windows_console()
@@ -38,6 +36,10 @@ class Handler:
         else:
             return "00:00:00"
 
+    def _voice(self, filename):
+        if not cfg.SIlENT_MODE:
+            winsound.PlaySound(filename, winsound.SND_FILENAME | winsound.SND_ASYNC)
+
     def _move_console_cursor(self, horizontal, vertical):
         ctypes.windll.kernel32.SetConsoleCursorPosition(ctypes.windll.kernel32.GetStdHandle(-11),
                                                         (vertical << 16) | horizontal)
@@ -66,10 +68,3 @@ class Handler:
         while True:
             self.update()
             time.sleep(1)
-
-
-
-
-if __name__ == "__main__":
-    handler = Handler()
-    handler.loop()
