@@ -40,33 +40,36 @@ class Helpers:
     def get_elapsed_time(start):
         if start:
             elapsed = time.time() - start
-            return f"{int(elapsed // 3600):02}:{int((elapsed % 3600) // 60):02}:{int(elapsed % 60):02}"
+            return Helpers.format(f"{int(elapsed // 3600):02}:{int((elapsed % 3600) // 60):02}:{int(elapsed % 60):02}", "cyan")
         else:
-            return "00:00:00"
+            return Helpers.format("N/A", "red")
 
     @staticmethod
     def play_sfx(filename):
         if not cfg.SIlENT_MODE:
             winsound.PlaySound(filename, winsound.SND_FILENAME | winsound.SND_ASYNC)
 
+    @staticmethod
+    def console_out(string, row = None):
+        if not row is None:
+            Helpers.move_cursor(row, 0)
+        print(string.ljust(cfg.CONSOLE_WIDTH))
 
 class Handler:
 
-    STATE_MODE = {
+    STATE_MODES = {
         0: Helpers.format("DISABLED", "red"),
         1: Helpers.format("ENABLED", "green"),
         2: Helpers.format("WAITING FOR FOCUS", "yellow")
     }
 
-    VALID_PROC_STATES = psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING
-
-    def __init__(self, tracked = None):
-        if not tracked and cfg.ATTACH_TO_PROCESS:
-            raise ValueError("Process name is missing when the process binding option is enabled!")
-        self.tracked_proc_name = tracked
-        self.active_proc_pool = []
+    def __init__(self, target = None):
+        if cfg.ATTACH_TO_PROCESS and not target:
+            raise ValueError("Target process name is missing when the process binding option is enabled!")
         self.state = 0
         self.start_time = 0
+        self.target_proc_name = target
+        self.tracked_proc_pool = []
         self.pressed_keys = set()
         self.listener = pynput.keyboard.Listener(
             on_press = self.on_press,
@@ -76,66 +79,80 @@ class Handler:
     def on_press(self, key):
         if not key in self.pressed_keys:
             self.pressed_keys.add(key)
-            if key is cfg.SWITCH_STATE_KEY: self.switch_state()
+            if key is cfg.SWITCH_STATE_KEY: self.switch()
 
     def on_release(self, key):
         self.pressed_keys.remove(key)
 
-    def check_proc_pool(self):
-        # find foreground pid
+    def check_target_status(self):
         hwnd = win32gui.GetForegroundWindow()
         _, fpid = win32process.GetWindowThreadProcessId(hwnd)
-        # remove closed process
-        for proc in self.active_proc_pool:
-            if not proc.status() in self.VALID_PROC_STATES:
-                self.active_proc_pool.remove(proc)
-        # update active target process list
-        if not self.active_proc_pool or not fpid in (proc.pid for proc in self.active_proc_pool):
-            for proc in psutil.process_iter(["name"]):
-                if proc.name() == self.tracked_proc_name and not proc in self.active_proc_pool:
-                    self.active_proc_pool.append(proc)
-        # return new status
-        if self.active_proc_pool:
-            return 1 if fpid in (proc.pid for proc in self.active_proc_pool) else 2
+        if self.tracked_proc_pool:
+            return 1 if fpid in (proc.pid for proc in self.tracked_proc_pool) else 2
         else:
             return 0
 
+    def update_proc_pool(self):
+        # remove from list dead processes
+        for proc in self.tracked_proc_pool:
+            try:
+                assert proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
+            except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied, AssertionError):
+                self.tracked_proc_pool.remove(proc)
+        # add to list new launched processes
+        for proc in psutil.process_iter(["name"]):
+            if proc.name() == self.target_proc_name and not proc in self.tracked_proc_pool:
+                self.tracked_proc_pool.append(proc)
 
-
-    def update(self):
+    def update(self, check_state = True):
         if cfg.ATTACH_TO_PROCESS:
-            cps = self.check_proc_pool()
+            self.update_proc_pool()
             if self.state:
+                cts = self.check_target_status()
+                if cts:
+                    self.state = cts
+                else:
+                    self.switch()
+        self.render()
+
+    def render(self):
+        if cfg.ATTACH_TO_PROCESS:
+            target = self.target_proc_name
+            pids_label = ", PID(s): "
+            if self.tracked_proc_pool:
+                pids = Helpers.format(", ".join(str(proc.pid) for proc in self.tracked_proc_pool), "cyan")
+            else:
+                pids = Helpers.format("N/A", "red")
+        else:
+            target = "ALL"
+            pids_label = ""
+            pids = ""
+        # Output to console
+        Helpers.console_out(Helpers.format("QuickMacro v1.0 ", "cyan"), 0)
+        Helpers.console_out("---")
+        Helpers.console_out("State: " + self.STATE_MODES[self.state] + " ")
+        Helpers.console_out("Target process: " + Helpers.format(target, "cyan") + pids_label + pids)
+        Helpers.console_out("Working time: " + Helpers.format(Helpers.get_elapsed_time(self.start_time), "cyan"))
+
+    def switch(self):
+        if self.state:
+            self.state = 0
+        else:
+            if cfg.ATTACH_TO_PROCESS:
+                cps = self.check_target_status()
                 if cps:
                     self.state = cps
                 else:
-                    self.switch_state()
-
-
-        Helpers.move_cursor(0, 0)
-        print(Helpers.format("QuickMacro v1.0 ", "cyan"))
-        Helpers.move_cursor(0, 2)
-        print("State: " + self.STATE_MODE[self.state] + " " * 20)
-        print("Target process: " + Helpers.format(tracked_process_name, "cyan") + " " * 20)
-        print("Working time: " + Helpers.format(Helpers.get_elapsed_time(self.start_time), "cyan") + " " * 20)
-
-
-
-    def switch_state(self):
-        if self.state:
-            self.state = 0
-            self.start_time = 0
-            Helpers.play_sfx("rsc/disabled.wav")
-        else:
-
-            self.state = 1
-            self.start_time = time.time()
-            Helpers.play_sfx("rsc/enabled.wav")
+                    return
+            else:
+                self.state = 1
+        self.start_time = time.time() if self.state else 0
+        Helpers.play_sfx("rsc/enabled.wav" if self.state else "rsc/disabled.wav")
 
     def loop(self):
         self.listener.start()
         if cfg.RUN_ON_STARTUP:
-            self.switch_state()
+            self.switch()
         while True:
             self.update()
-            time.sleep(1)
+            time.sleep(1/cfg.UPDATE_FREQUENCY)

@@ -2,10 +2,13 @@
 
 from pynput.keyboard import Key, KeyCode
 
+# COMMON
+CONSOLE_WIDTH = 120
+SWITCH_STATE_KEY = Key.home
+UPDATE_FREQUENCY = 2
 
 # EVENT HANDLER
 
 SIlENT_MODE = False
 RUN_ON_STARTUP = True
 ATTACH_TO_PROCESS = True
-SWITCH_STATE_KEY = Key.home
