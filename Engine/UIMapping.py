@@ -3,6 +3,6 @@
 MAP = {
     "1920x1080": {
         "cell_width": 80,
-        "cell_height" 80,
+        "cell_height": 80,
     }
 }

@@ -11,6 +11,7 @@ import winsound
 import colorama as cs
 
 from Engine import Config as cfg
+from Engine.InputEmulator import EmulationError
 
 
 # Colorama initialization
@@ -63,6 +64,8 @@ class Handler:
         2: Helpers.format("WAITING FOR FOCUS", "yellow")
     }
 
+    state = 0
+
     def __init__(self, target = None):
         if cfg.ATTACH_TO_PROCESS and not target:
             raise ValueError("Target process name is missing when the process binding option is enabled!")
@@ -71,6 +74,7 @@ class Handler:
         self.target_proc_name = target
         self.tracked_proc_pool = []
         self.pressed_keys = set()
+        self.callbacks = {}
         self.listener = pynput.keyboard.Listener(
             on_press = self.on_press,
             on_release = self.on_release
@@ -79,10 +83,21 @@ class Handler:
     def on_press(self, key):
         if not key in self.pressed_keys:
             self.pressed_keys.add(key)
-            if key is cfg.SWITCH_STATE_KEY: self.switch()
+            if key is cfg.SWITCH_STATE_KEY:
+                self.switch()
+            else:
+                if self.state == 1:
+                    if key in self.callbacks:
+                        try:
+                            self.callbacks[key]()
+                        except EmulationError:
+                            pass
 
     def on_release(self, key):
         self.pressed_keys.remove(key)
+
+    def bind(self, key, callback):
+        self.callbacks[key] = callback
 
     def check_target_status(self):
         hwnd = win32gui.GetForegroundWindow()
