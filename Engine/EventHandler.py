@@ -46,15 +46,26 @@ class Helpers:
             return Helpers.format("N/A", "red")
 
     @staticmethod
-    def play_sfx(filename):
-        if not cfg.SIlENT_MODE:
-            winsound.PlaySound(filename, winsound.SND_FILENAME | winsound.SND_ASYNC)
-
-    @staticmethod
     def console_out(string, row = None):
         if not row is None:
             Helpers.move_cursor(row, 0)
         print(string.ljust(cfg.CONSOLE_WIDTH))
+
+    @staticmethod
+    def beep(msg):
+        if not cfg.SIlENT_MODE:
+            if msg == "on":
+                winsound.Beep(300, 80)
+                winsound.Beep(500, 80)
+            elif msg == "off":
+                winsound.Beep(500, 80)
+                winsound.Beep(300, 80)
+            elif msg == "err":
+                winsound.Beep(200, 80)
+                winsound.Beep(200, 80)
+
+
+
 
 class Handler:
 
@@ -158,11 +169,12 @@ class Handler:
                 if cps:
                     self.state = cps
                 else:
+                    Helpers.beep("err")
                     return
             else:
                 self.state = 1
         self.start_time = time.time() if self.state else 0
-        Helpers.play_sfx("rsc/enabled.wav" if self.state else "rsc/disabled.wav")
+        Helpers.beep("on" if self.state else "off")
 
     def loop(self):
         self.listener.start()
@@ -170,4 +182,4 @@ class Handler:
             self.switch()
         while True:
             self.update()
-            time.sleep(1/cfg.UPDATE_FREQUENCY)
+            time.sleep(1 / cfg.CONSOLE_UPDATE_FREQUENCY)
