@@ -1,6 +1,8 @@
 #
 #
 
+from pynput.keyboard import Key, KeyCode
+
 MAP_DICT = {
     (1920, 1080): {
         "headwear": {303, 314, 30, 30},
@@ -12,5 +14,15 @@ MAP_DICT = {
 
 class Macro:
 
-    def __init__(self, handler):
-        pass
+    def __init__(self, keyboard, mouse):
+        self.name = "GTA5RP Extender"
+        self.target = "GTA5.exe"
+        self.keyboard = keyboard
+        self.mouse = mouse
+        self.table = {
+            Key.shift_r: (self.test, "Test callback")
+        }
+
+
+    def test(self):
+        self.keyboard.click("t")

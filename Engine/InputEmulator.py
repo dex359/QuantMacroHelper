@@ -6,85 +6,71 @@ import random
 
 from pynput import keyboard, mouse
 
-from Engine import EventHandler as eh
+from Engine import EventHandler
 from Engine import Config as cfg
 
 
 class EmulationError(Exception):
 
-    def __init__(self, msg):
+    MACRO_EXEC_INTERRUPTED = 1
+    KB_DUPLICATE_KEY_PRESS = 2
+
+    def __init__(self, msg, errcode):
         super().__init__(msg)
+        self.errcode = errcode
 
 
-def sleep(min_time, max_time):
-    if eh.Handler.state:
-        time.sleep(random.randint(min_time, max_time)/1000)
+def sleep(min_time, max_time, multiplier = 1):
+    if EventHandler.Handler.STATE == 1:
+        time.sleep(random.randint(min_time, max_time) / 1000 * multiplier)
     else:
-        raise EmulationError("Macro execution interrupted by switch handler state.")
+        raise EmulationError("Macro execution interrupted by switch handler state.",
+                             EmulationError.MACRO_EXEC_INTERRUPTED)
 
 
 class Keyboard:
 
-    def __init__(self, multiplier = cfg.KB_EVENTS_SPEED_MULTIPLIER):
-        self.mp = multiplier
-        self.keyboard = keyboard.Controller()
+    def __init__(self, mtpl = cfg.KB_EVENTS_SPEED_MULTIPLIER):
+        self.multiplier = mtpl
+        self.pressed_pool = set()
+        self.controller = keyboard.Controller()
 
-    def press(self,
-              key,
-              press_min_t = cfg.MIN_PRESS_TIME,
-              press_max_t = cfg.MAX_PRESS_TIME):
-        self.keyboard.press(key)
-        sleep(press_min_t * self.mp, press_max_t * self.mp)
+    def _uniform(self, key):
+        if isinstance(key, str):
+            return keyboard.KeyCode.from_char(key)
+        return key
 
-    def release(self,
-                key,
-                release_min_t = cfg.MIN_RELEASE_TIME,
-                release_max_t = cfg.MAX_RELEASE_TIME):
-        self.keyboard.release(key)
-        sleep(release_min_t * self.mp, release_max_t * self.mp)
+    def press(self, key, press_time = cfg.KB_PRESS_TIME, max_press_time = cfg.KB_MAX_PRESS_TIME):
+        key = self._uniform(key)
+        if not key in self.pressed_pool:
+            self.pressed_pool.add(key)
+            self.controller.press(key)
+            sleep(press_time, max_press_time, self.multiplier)
+        else:
+            raise EmulationError("'%s' key already pressed!", EmulationError.KB_DUPLICATE_KEY_PRESS)
+
+    def release(self, key, release_time = cfg.KB_RELEASE_TIME, max_release_time = cfg.KB_MAX_RELEASE_TIME):
+        key = self._uniform(key)
+        self.pressed_pool.remove(key)
+        self.controller.release(key)
+        sleep(release_time, max_release_time, self.multiplier)
 
     def click(self,
               key,
-              press_min_t   = cfg.MIN_PRESS_TIME,
-              press_max_t   = cfg.MAX_PRESS_TIME,
-              release_min_t = cfg.MIN_RELEASE_TIME,
-              release_max_t = cfg.MAX_RELEASE_TIME):
-        self.press(key, press_min_t, press_max_t)
-        self.release(key, release_min_t, release_max_t)
+              press_time       = cfg.KB_PRESS_TIME,
+              max_press_time   = cfg.KB_MAX_PRESS_TIME,
+              release_time     = cfg.KB_RELEASE_TIME,
+              max_release_time = cfg.KB_MAX_RELEASE_TIME):
+        self.press(key, press_time, max_press_time)
+        self.release(key, release_time, max_release_time)
 
+    def release_all(self):
+        for key in self.pressed_pool:
+            self.controller.release(key)
+            self.pressed_pool.remove(key)
 
 
 class Mouse:
 
-    def __init__(self,
-                 multiplier     = cfg.MS_EVENTS_SPEED_MULTIPLIER,
-                 discretization = cfg.MS_MOVS_DISCRETIZATION):
-        self.mp = multiplier
-        self.dc = discretization
-        self.mouse = mouse.Controller()
-
-    def press(self,
-              button,
-              press_min_t = cfg.MIN_PRESS_TIME,
-              press_max_t = cfg.MAX_PRESS_TIME):
-        self.mouse.press(button)
-        sleep(press_min_t * self.mp, press_max_t * self.mp)
-
-    def release(self,
-                button,
-                release_min_t = cfg.MIN_RELEASE_TIME,
-                release_max_t = cfg.MAX_RELEASE_TIME):
-        self.mouse.release(button)
-        sleep(release_min_t * self.mp, release_max_t * self.mp)
-
-    def click(self,
-              button,
-              press_min_t   = cfg.MIN_PRESS_TIME,
-              press_max_t   = cfg.MAX_PRESS_TIME,
-              release_min_t = cfg.MIN_RELEASE_TIME,
-              release_max_t = cfg.MAX_RELEASE_TIME):
-        self.press(button, press_min_t, press_max_t)
-        self.release(button, release_min_t, release_max_t)
-
-    def move(self, tx, ty):
-        cx, cy = self.mouse.position
+    def __init__(self):
+        pass

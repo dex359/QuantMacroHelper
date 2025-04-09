@@ -4,6 +4,7 @@ import shutil
 import ctypes
 
 from Engine import EventHandler
+from Engine.InputEmulator import Keyboard, Mouse
 
 # load working scenario
 from Macros.GTA5RP import Macro
@@ -22,7 +23,7 @@ if not is_admin():
     wt_path = shutil.which("wt.exe")
     if wt_path:
         command = f'powershell -NoExit -Command "python \'{script_path}\'"'
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", wt_path, command, None, 1)
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", wt_path, f'--startingDirectory "{script_dir}" {command}', None, 1)
     else:
         python_path = sys.executable
         command = f'/k cd /d "{script_dir}" && "{python_path}" "{script_path}"'
@@ -30,6 +31,5 @@ if not is_admin():
     sys.exit()
 
 if __name__ == "__main__":
-    handler = EventHandler.Handler("BlueScreenView.exe")
-    macro = Macro(handler)
+    handler = EventHandler.Handler(Macro(Keyboard(),Mouse()))
     handler.loop()

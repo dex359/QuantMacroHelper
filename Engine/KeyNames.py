@@ -4,7 +4,7 @@ from pynput import keyboard
 class KeyboardHandler:
 
     def __init__(self, container, refresh):
-        self.container = container
+        self.container = {}
         self.refresh = refresh
         self.listener = keyboard.Listener(
             on_press = self.on_press,
@@ -13,17 +13,18 @@ class KeyboardHandler:
 
     def on_press(self, key):
         if not key in self.container:
-            self.container.add(key)
-            self.refresh()
+            self.container[key] = "hhh"
+#            self.refresh()
 
     def on_release(self, key):
-        self.container.remove(key)
-        self.refresh()
+        print(key in self.container)
+        #self.container.remove(key)
+#        self.refresh()
 
 class Tester:
 
     def __init__(self):
-        self.container = set()
+        self.container = []
         self.handler = KeyboardHandler(
             self.container,
             self.refresh
