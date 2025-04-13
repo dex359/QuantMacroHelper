@@ -3,8 +3,9 @@ import sys
 import shutil
 import ctypes
 
-from Engine import EventHandler
-from Engine.InputEmulator import Keyboard, Mouse
+from Engine import Interceptor
+from Engine.Emulator import Keyboard, Mouse
+from Engine.Interceptor import Main
 
 # load working scenario
 from Macros.GTA5RP import Macro
@@ -31,5 +32,5 @@ if not is_admin():
     sys.exit()
 
 if __name__ == "__main__":
-    handler = EventHandler.Handler(Macro(Keyboard(),Mouse()))
+    handler = Main(Macro(Keyboard(), Mouse()))
     handler.loop()

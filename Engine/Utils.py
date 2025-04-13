@@ -24,10 +24,10 @@ def fill(string, color):
     }[color] + string + cs.Fore.WHITE
 
 
-def move_cursor(horizontal, vertical):
-    ctypes.windll.kernel32.SetConsoleCursorPosition(ctypes.windll.kernel32.GetStdHandle(-11),
+def move_cursor(row, column):
+    ctypes.windll.kernel32.SetConsoleCursorPosition(ctypes.windll.kernel32.GetStdHandle(-11), (row << 16) | column)
 
-                                                    (vertical << 16) | horizontal)
+
 def get_elapsed_time(start):
     if start:
         elapsed = time.time() - start
@@ -36,21 +36,10 @@ def get_elapsed_time(start):
         return fill("N/A", "red")
 
 
-def console_out(string, row = None):
-    if not row is None:
-        move_cursor(row, 0)
-    print(string.ljust(cfg.CONSOLE_WIDTH))
 
 
-def beep(msg):
-    if not cfg.SILENT_MODE:
-        if msg == "on":
-            winsound.PlaySound("rsc/enabled.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
-        elif msg == "off":
-            winsound.PlaySound("rsc/disabled.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
-        elif msg == "err":
-            winsound.Beep(200, 90)
-            winsound.Beep(200, 90)
+
+
 
 
 

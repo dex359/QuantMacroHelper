@@ -6,7 +6,7 @@ import random
 
 from pynput import keyboard, mouse
 
-from Engine import EventHandler
+from Engine import Interceptor
 from Engine import Config as cfg
 
 
@@ -21,7 +21,7 @@ class EmulationError(Exception):
 
 
 def sleep(min_time, max_time, multiplier = 1):
-    if EventHandler.Handler.STATE == 1:
+    if Interceptor.State.current == Interceptor.State.ENABLED:
         time.sleep(random.randint(min_time, max_time) / 1000 * multiplier)
     else:
         raise EmulationError("Macro execution interrupted by switch handler state.",

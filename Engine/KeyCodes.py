@@ -4,6 +4,20 @@
 from pynput import keyboard as kb
 
 
+
+# KB hook event codes
+class EVENT:
+
+    WM_KEYDOWN     = 0x0100
+    WM_KEYUP       = 0x0101
+    WM_SYSKEYDOWN  = 0x0104
+    WM_SYSKEYUP    = 0x0105
+    WM_CHAR        = 0x0102
+    WM_DEADCHAR    = 0x0103
+    WM_SYSCHAR     = 0x0106
+    WM_SYSDEADCHAR = 0x0107
+
+
 # Mapping table by key names
 # abstract names for convenience when creating a macro
 KEY_NAMES_TABLE = {
@@ -14,7 +28,7 @@ KEY_NAMES_TABLE = {
     'tab':         (kb.Key.tab,                 0x09),  # Tab
     'caps_lock':   (kb.Key.caps_lock,           0x14),  # Caps Lock
     'enter':       (kb.Key.enter,               0x0D),  # Enter
-    'shift':       (kb.Key.shift,               0x10),  # Shift
+    'shift':       (kb.Key.shift,               0xA0),  # Shift
     'r_shift':     (kb.Key.shift_r,             0xA1),  # Right Shift
     'ctrl':        (kb.Key.ctrl_l,              0xA2),  # Left Ctrl
     'r_ctrl':      (kb.Key.ctrl_r,              0xA3),  # Right Ctrl
@@ -149,6 +163,9 @@ class _KeyObj:
         self.key_name = key_name
         self.key_code = key_code
         self.vc_code  = vc_code
+
+    def __str__(self):
+        return f"<{self.key_code}> '{self.key_name}' {hex(self.vc_code)}"
 
 
 class _KeyBuffer:
